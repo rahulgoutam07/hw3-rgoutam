@@ -11,6 +11,8 @@ import org.apache.uima.jcas.cas.StringArray;
 import org.apache.uima.jcas.tcas.Annotation;
 
 import edu.cmu.lti.f14.hw3.hw3_rgoutam.typesystems.Document;
+import edu.cmu.lti.f14.hw3.hw3_rgoutam.typesystems.Token;
+import edu.cmu.lti.f14.hw3.hw3_rgoutam.utils.Utils;
 
 public class DocumentVectorAnnotator extends JCasAnnotator_ImplBase {
 
@@ -51,9 +53,25 @@ public class DocumentVectorAnnotator extends JCasAnnotator_ImplBase {
 
 		String docText = doc.getText();
 		
-		//TO DO: construct a vector of tokens and update the tokenList in CAS
-    //TO DO: use tokenize0 from above 
+		List<String> tokens = tokenize0(docText);
 		
+		Map<String, Integer> wordMap = new HashMap<String, Integer>();
+		for(String w : tokens) {
+		  if(wordMap.containsKey(w))
+		    wordMap.put(w,  wordMap.get(w) + 1);
+		  else
+		    wordMap.put(w,  1);
+		}
+		
+		Collection<Token> tokenList = new ArrayList<Token>();
+		
+		for(String w: wordMap.keySet()) {
+		  Token t = new Token(jcas);
+		  t.setText(w);
+		  t.setFrequency(wordMap.get(w));
+		  tokenList.add(t);
+		}
+		doc.setTokenList(Utils.fromCollectionToFSList(jcas, tokenList));
 
 	}
 
