@@ -72,7 +72,7 @@ public class DocumentVectorAnnotator extends JCasAnnotator_ImplBase {
 		  tokenList.add(t);
 		}
 		doc.setTokenList(Utils.fromCollectionToFSList(jcas, tokenList));
-
+		
 	}
 
 }

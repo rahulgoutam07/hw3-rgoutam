@@ -2,6 +2,9 @@ package edu.cmu.lti.f14.hw3.hw3_rgoutam.casconsumers;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.uima.cas.CAS;
@@ -15,6 +18,8 @@ import org.apache.uima.resource.ResourceProcessException;
 import org.apache.uima.util.ProcessTrace;
 
 import edu.cmu.lti.f14.hw3.hw3_rgoutam.typesystems.Document;
+import edu.cmu.lti.f14.hw3.hw3_rgoutam.typesystems.Token;
+import edu.cmu.lti.f14.hw3.hw3_rgoutam.utils.Utils;
 
 
 public class RetrievalEvaluator extends CasConsumer_ImplBase {
@@ -25,13 +30,23 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 	/** query and text relevant values **/
 	public ArrayList<Integer> relList;
 
-		
+	public ArrayList<Map<String, Double>> fsList;
+	
+	public ArrayList<String> docList;
+	
+	public ArrayList<Double> cosineSimilarity;
+	
 	public void initialize() throws ResourceInitializationException {
 
 		qIdList = new ArrayList<Integer>();
 
 		relList = new ArrayList<Integer>();
-
+		
+		fsList = new ArrayList<Map<String, Double>>();
+		
+		docList = new ArrayList<String>();
+		
+		cosineSimilarity = new ArrayList<Double>();
 	}
 
 	/**
@@ -60,12 +75,26 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 			qIdList.add(doc.getQueryID());
 			relList.add(doc.getRelevanceValue());
 			
+			ArrayList<Token> queryToken = Utils.fromFSListToCollection(fsList.get(i), Token.class);
+      Map<String, Integer> temp = convertToMap(queryToken);
+      Map<String, Double> queryMap = L1Norm(temp);
+			
+			fsList.add(queryMap);
+			docList.add(doc.getText());
+			
 			//Do something useful here
 
 		}
 
 	}
 
+	
+	private Map<String, Integer> convertToMap(Collection<Token> c) {
+	  Map<String, Integer> ret = new HashMap<String, Integer>();
+	  for(Token t : c)
+	    ret.put(t.getText(), t.getFrequency());
+    return ret;
+	}
 	/**
 	 * TODO 1. Compute Cosine Similarity and rank the retrieved sentences 2.
 	 * Compute the MRR metric
@@ -76,12 +105,32 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 
 		super.collectionProcessComplete(arg0);
 
-		// TODO :: compute the cosine similarity measure
+    // TODO :: compute the cosine similarity measure
 		
-		
-		
+		int i = 0;
+		while(i < qIdList.size()) {
+		  Map<String, Double> queryMap = fsList.get(i);
+		  cosineSimilarity.add(1.0);
+		  int j = i + 1;
+		  while(j < qIdList.size() && qIdList.get(j) == qIdList.get(j)) {
+		    Map<String, Double> docMap = fsList.get(j);
+		    double cosSim = computeCosineSimilarity(queryMap, docMap);
+		    cosineSimilarity.add(cosSim);
+		  }
+		}
+
 		// TODO :: compute the rank of retrieved sentences
-		
+		i = 0;
+		while(i < qIdList.size()) {
+		  ArrayList<Integer> temp = new ArrayList<Integer>();
+		  int j = i + 1;
+		  while(j < qIdList.size() && qIdList.get(j) == qIdList.get(j)) {
+		    temp.add(j);
+		  }
+		  
+		  Collections.sort(temp,  myComparator);
+		  
+		}
 		
 		
 		// TODO :: compute the metric:: mean reciprocal rank
@@ -89,16 +138,59 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 		System.out.println(" (MRR) Mean Reciprocal Rank ::" + metric_mrr);
 	}
 
+	private Map<String, Double> L1Norm(Map<String, Integer> vector) {
+	  double mag = 0.0;
+	  Map<String, Double> ret = new HashMap<String, Double>();
+	  for(String w : vector.keySet()) {
+      mag += vector.get(w);
+    }
+	  for(String w: vector.keySet()) {
+	    ret.put(w, (double)vector.get(w)/mag);
+	  }
+	  return ret;
+	}
+	
+	private Map<String, Double> L2Norm(Map<String, Integer> vector) {
+    double mag = 0.0;
+    Map<String, Double> ret = new HashMap<String, Double>();
+    for(String w : vector.keySet()) {
+      mag += (vector.get(w) * vector.get(w));
+    }
+    mag = Math.sqrt(mag);
+    
+    for(String w: vector.keySet()) {
+      ret.put(w, (double)vector.get(w)/mag);
+    }
+    return ret;
+  }
+	
+	private double L2NormMag(Map<String, Double> vector) {
+    double mag = 0.0;
+    Map<String, Double> ret = new HashMap<String, Double>();
+    for(String w : vector.keySet()) {
+      mag += (vector.get(w) * vector.get(w));
+    }
+    mag = Math.sqrt(mag);
+    return mag;
+  }
+	
 	/**
 	 * 
 	 * @return cosine_similarity
 	 */
-	private double computeCosineSimilarity(Map<String, Integer> queryVector,
-			Map<String, Integer> docVector) {
+	private double computeCosineSimilarity(Map<String, Double> queryVector,
+			Map<String, Double> docVector) {
 		double cosine_similarity=0.0;
 
 		// TODO :: compute cosine similarity between two sentences
-		
+		double magQuery = L2NormMag(queryVector), magDoc = L2NormMag(docVector);
+		double num = 0;
+		for(String w : queryVector.keySet()) {
+		  if(docVector.containsKey(w)) {
+		    num += queryVector.get(w) * docVector.get(w);
+		  }
+		}
+		cosine_similarity = num/(magQuery * magDoc);
 
 		return cosine_similarity;
 	}
