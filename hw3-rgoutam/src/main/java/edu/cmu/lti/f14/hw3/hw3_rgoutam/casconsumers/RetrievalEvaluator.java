@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -36,6 +37,8 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 	
 	public ArrayList<Double> cosineSimilarity;
 	
+	public ArrayList<Integer> rankList;
+	
 	public void initialize() throws ResourceInitializationException {
 
 		qIdList = new ArrayList<Integer>();
@@ -47,6 +50,8 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 		docList = new ArrayList<String>();
 		
 		cosineSimilarity = new ArrayList<Double>();
+		
+		rankList = new ArrayList<Integer>();
 	}
 
 	/**
@@ -75,7 +80,7 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 			qIdList.add(doc.getQueryID());
 			relList.add(doc.getRelevanceValue());
 			
-			ArrayList<Token> queryToken = Utils.fromFSListToCollection(fsList.get(i), Token.class);
+			ArrayList<Token> queryToken = Utils.fromFSListToCollection(doc.getTokenList(), Token.class);
       Map<String, Integer> temp = convertToMap(queryToken);
       Map<String, Double> queryMap = L1Norm(temp);
 			
@@ -95,6 +100,7 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 	    ret.put(t.getText(), t.getFrequency());
     return ret;
 	}
+	
 	/**
 	 * TODO 1. Compute Cosine Similarity and rank the retrieved sentences 2.
 	 * Compute the MRR metric
@@ -116,7 +122,9 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 		    Map<String, Double> docMap = fsList.get(j);
 		    double cosSim = computeCosineSimilarity(queryMap, docMap);
 		    cosineSimilarity.add(cosSim);
+		    j++;
 		  }
+		  i = j;
 		}
 
 		// TODO :: compute the rank of retrieved sentences
@@ -126,10 +134,24 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 		  int j = i + 1;
 		  while(j < qIdList.size() && qIdList.get(j) == qIdList.get(j)) {
 		    temp.add(j);
+		    j++;
 		  }
 		  
-		  Collections.sort(temp,  myComparator);
-		  
+		  Collections.sort(temp,  new Comparator<Integer>() {
+		    public int compare(Integer o1, Integer o2) {
+		      return cosineSimilarity.get(o1).compareTo(cosineSimilarity.get(o2));
+		    }
+		  });
+		  Collections.reverse(temp);
+		  int rank = 0;
+		  for(int k = 0; k < temp.size(); k++) {
+		    if(relList.get(temp.get(k)) == 1) {
+		      rank = k;
+		      rankList.add(k);
+		      break;
+		    }
+		  }
+		  i = j;
 		}
 		
 		
@@ -200,8 +222,11 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 	 * @return mrr
 	 */
 	private double compute_mrr() {
-		double metric_mrr=0.0;
-
+		double metric_mrr=0.0, sumRank = 0.0;
+		for(int i = 0; i < rankList.size(); i++) {
+		  sumRank += 1.0/rankList.get(i);
+		}
+		metric_mrr = (1.0/rankList.size()) * sumRank;
 		// TODO :: compute Mean Reciprocal Rank (MRR) of the text collection
 		
 		return metric_mrr;
