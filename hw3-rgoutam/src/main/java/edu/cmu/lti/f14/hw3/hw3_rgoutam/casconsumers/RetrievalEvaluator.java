@@ -113,6 +113,8 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 
     // TODO :: compute the cosine similarity measure
 		
+		
+		
 		int i = 0;
 		while(i < qIdList.size()) {
 		  Map<String, Double> queryMap = fsList.get(i);
@@ -132,7 +134,7 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 		while(i < qIdList.size()) {
 		  ArrayList<Integer> temp = new ArrayList<Integer>();
 		  int j = i + 1;
-		  while(j < qIdList.size() && qIdList.get(j) == qIdList.get(j)) {
+		  while(j < qIdList.size() && qIdList.get(i) == qIdList.get(j)) {
 		    temp.add(j);
 		    j++;
 		  }
@@ -143,11 +145,9 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 		    }
 		  });
 		  Collections.reverse(temp);
-		  int rank = 0;
 		  for(int k = 0; k < temp.size(); k++) {
 		    if(relList.get(temp.get(k)) == 1) {
-		      rank = k;
-		      rankList.add(k);
+		      rankList.add(k + 1);
 		      break;
 		    }
 		  }
@@ -223,6 +223,7 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 	 */
 	private double compute_mrr() {
 		double metric_mrr=0.0, sumRank = 0.0;
+		System.out.println(rankList.size() + " " + rankList);
 		for(int i = 0; i < rankList.size(); i++) {
 		  sumRank += 1.0/rankList.get(i);
 		}
