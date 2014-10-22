@@ -1,5 +1,8 @@
 package edu.cmu.lti.f14.hw3.hw3_rgoutam.casconsumers;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -39,6 +42,8 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 	
 	public ArrayList<Integer> rankList;
 	
+	private BufferedWriter bout;
+	
 	public void initialize() throws ResourceInitializationException {
 
 		qIdList = new ArrayList<Integer>();
@@ -52,6 +57,13 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 		cosineSimilarity = new ArrayList<Double>();
 		
 		rankList = new ArrayList<Integer>();
+		
+		try {
+      bout = new BufferedWriter(new FileWriter(new File("report.txt")));
+    } catch (IOException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
 	}
 
 	/**
@@ -120,9 +132,10 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 		  Map<String, Double> queryMap = fsList.get(i);
 		  cosineSimilarity.add(1.0);
 		  int j = i + 1;
-		  while(j < qIdList.size() && qIdList.get(j) == qIdList.get(j)) {
+		  while(j < qIdList.size() && qIdList.get(j) == qIdList.get(i)) {
 		    Map<String, Double> docMap = fsList.get(j);
 		    double cosSim = computeCosineSimilarity(queryMap, docMap);
+		    //double cosSim = computeDiceSimilarity(queryMap, docMap);
 		    cosineSimilarity.add(cosSim);
 		    j++;
 		  }
@@ -145,9 +158,12 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 		    }
 		  });
 		  Collections.reverse(temp);
+		  //System.out.println("temp = " + temp);
 		  for(int k = 0; k < temp.size(); k++) {
 		    if(relList.get(temp.get(k)) == 1) {
 		      rankList.add(k + 1);
+		      int t = temp.get(k);
+		      bout.write("cosine=" + String.format("%.4g", cosineSimilarity.get((t))) + "\trank=" + (k + 1) + "\tqid=" + qIdList.get(t) + "\trel=" + relList.get(t) +"\t" + docList.get(t) + "\n" );
 		      break;
 		    }
 		  }
@@ -155,9 +171,18 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 		}
 		
 		
+		/*
+		 * Error analysis print all queries and documents here with similarity scores
+		 */
+		/*for(i = 0; i < qIdList.size(); i++) {
+		  System.out.println(qIdList.get(i) + "\t" + relList.get(i) + "\t" + cosineSimilarity.get(i) + "\t" + docList.get(i));
+		}
+		*/
+
 		// TODO :: compute the metric:: mean reciprocal rank
 		double metric_mrr = compute_mrr();
-		System.out.println(" (MRR) Mean Reciprocal Rank ::" + metric_mrr);
+		bout.write("MRR=" + String.format("%.4g", metric_mrr) + "\n");
+		bout.close();
 	}
 
 	private Map<String, Double> L1Norm(Map<String, Integer> vector) {
@@ -166,6 +191,7 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 	  for(String w : vector.keySet()) {
       mag += vector.get(w);
     }
+	  mag = 1.0;
 	  for(String w: vector.keySet()) {
 	    ret.put(w, (double)vector.get(w)/mag);
 	  }
@@ -216,20 +242,42 @@ public class RetrievalEvaluator extends CasConsumer_ImplBase {
 
 		return cosine_similarity;
 	}
+	
+	/**
+	 * return dice similarity measure
+	 * @param queryVector
+	 * @param docVector
+	 * @return
+	 */
+	private double computeDiceSimilarity(Map<String, Double> queryVector, Map<String, Double> docVector) {
+	  double sim = 0;
+	  
+	  double magQuery = L2NormMag(queryVector), magDoc = L2NormMag(docVector);
+	  magQuery = magQuery * magQuery;
+	  magDoc = magDoc * magDoc;
+	  
+    double num = 0;
+    for(String w : queryVector.keySet()) {
+      if(docVector.containsKey(w)) {
+        num += queryVector.get(w) * docVector.get(w);
+      }
+    }
+    num *= 2;
+    sim = num/(magQuery + magDoc);
+	  return sim;
+	}
 
 	/**
 	 * 
 	 * @return mrr
 	 */
 	private double compute_mrr() {
+	// TODO :: compute Mean Reciprocal Rank (MRR) of the text collection
 		double metric_mrr=0.0, sumRank = 0.0;
-		System.out.println(rankList.size() + " " + rankList);
 		for(int i = 0; i < rankList.size(); i++) {
 		  sumRank += 1.0/rankList.get(i);
 		}
 		metric_mrr = (1.0/rankList.size()) * sumRank;
-		// TODO :: compute Mean Reciprocal Rank (MRR) of the text collection
-		
 		return metric_mrr;
 	}
 
