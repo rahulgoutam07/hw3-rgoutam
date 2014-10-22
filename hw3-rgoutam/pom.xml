@@ -81,7 +81,12 @@
       <version>3.4</version>
     </dependency>
 	</dependencies>
-
+	<scm>
+		<url>scm:git:git@github.com:rahulgoutam07/hw3-rgoutam.git</url>
+		<connection>scm:git:git@github.com:rahulgoutam07/hw3-rgoutam.git</connection>
+		<developerConnection>scm:git:git@github.com:rahulgoutam07/hw3-rgoutam.git</developerConnection>
+		<tag>HEAD</tag>
+	</scm>
 	<build>
 		<plugins>
 			<plugin>
@@ -95,7 +100,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-release-plugin</artifactId>
-				<version>2.2.1</version>
+				<version>2.5</version>
 				<executions>
 					<execution>
 						<id>default</id>
